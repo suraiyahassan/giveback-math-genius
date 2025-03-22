@@ -7,7 +7,8 @@ import {
   calculateZakat, 
   ZakatResult, 
   DEFAULT_METAL_PRICES,
-  Currency
+  Currency,
+  GoldEntry
 } from '@/utils/zakatCalculations';
 import AssetInput from './AssetInput';
 import MetalInput from './MetalInput';
@@ -47,11 +48,28 @@ const ZakatCalculator: React.FC = () => {
   // State for nisab metal preference
   const [preferredMetal, setPreferredMetal] = useState<'gold' | 'silver'>('silver');
   
+  // State for gold entries (needed for detailed report)
+  const [goldEntries, setGoldEntries] = useState<GoldEntry[]>([
+    { id: '1', weight: 0, purity: '24k', rate: 62.5 }
+  ]);
+  
+  // State for silver details (needed for detailed report)
+  const [silverWeight, setSilverWeight] = useState<number>(0);
+  const [silverRate, setSilverRate] = useState<number>(0.78);
+  
   // Calculate zakat when inputs change
   useEffect(() => {
-    const zakatResult = calculateZakat(assets, liabilities, DEFAULT_METAL_PRICES, preferredMetal);
+    const zakatResult = calculateZakat(
+      assets, 
+      liabilities, 
+      DEFAULT_METAL_PRICES, 
+      preferredMetal,
+      goldEntries,
+      silverWeight,
+      silverRate
+    );
     setResult(zakatResult);
-  }, [assets, liabilities, preferredMetal]);
+  }, [assets, liabilities, preferredMetal, goldEntries, silverWeight, silverRate]);
   
   // Handle asset change
   const handleAssetChange = (key: keyof AssetValues, value: number) => {
@@ -80,6 +98,25 @@ const ZakatCalculator: React.FC = () => {
       debts: 0,
       expenses: 0
     });
+    
+    setGoldEntries([
+      { id: '1', weight: 0, purity: '24k', rate: 62.5 }
+    ]);
+    
+    setSilverWeight(0);
+    setSilverRate(0.78);
+  };
+  
+  // Handle metal input changes
+  const handleGoldChange = (value: number, entries: GoldEntry[]) => {
+    handleAssetChange('gold', value);
+    setGoldEntries(entries);
+  };
+  
+  const handleSilverChange = (value: number, weight: number, rate: number) => {
+    handleAssetChange('silver', value);
+    setSilverWeight(weight);
+    setSilverRate(rate);
   };
   
   return (
@@ -149,7 +186,7 @@ const ZakatCalculator: React.FC = () => {
                       <MetalInput
                         type="gold"
                         value={assets.gold}
-                        onChange={(value) => handleAssetChange('gold', value)}
+                        onChange={(value, entries) => handleGoldChange(value, entries as GoldEntry[])}
                         currency={currency}
                       />
                     </div>
@@ -160,7 +197,7 @@ const ZakatCalculator: React.FC = () => {
                       <MetalInput
                         type="silver"
                         value={assets.silver}
-                        onChange={(value) => handleAssetChange('silver', value)}
+                        onChange={(value, weight, rate) => handleSilverChange(value, weight as number, rate as number)}
                         currency={currency}
                       />
                     </div>

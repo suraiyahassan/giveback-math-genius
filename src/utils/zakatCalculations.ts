@@ -30,6 +30,16 @@ export const GOLD_PURITY_FACTORS = {
 
 export type GoldPurity = keyof typeof GOLD_PURITY_FACTORS;
 
+// Gold entry interface for detailed breakdown
+export interface GoldEntry {
+  id: string;
+  weight: number;
+  purity: GoldPurity;
+  rate: number;
+  value?: number;
+  zakatAmount?: number;
+}
+
 // Calculate Nisab threshold in currency based on gold and silver prices
 export const calculateNisab = (
   metalPrices: MetalPrices = DEFAULT_METAL_PRICES,
@@ -68,6 +78,19 @@ export interface Liabilities {
   expenses: number;
 }
 
+export interface DetailedBreakdownItem {
+  category: string;
+  amount: number;
+  zakatAmount: number;
+  details?: string;
+  entries?: GoldEntryWithZakat[];
+}
+
+export interface GoldEntryWithZakat extends GoldEntry {
+  value: number;
+  zakatAmount: number;
+}
+
 export interface ZakatResult {
   nisabThreshold: number;
   totalAssets: number;
@@ -80,13 +103,18 @@ export interface ZakatResult {
     amount: number;
     zakatAmount: number;
   }[];
+  // New field for detailed breakdown
+  detailedBreakdown?: DetailedBreakdownItem[];
 }
 
 export const calculateZakat = (
   assets: AssetValues,
   liabilities: Liabilities,
   metalPrices: MetalPrices = DEFAULT_METAL_PRICES,
-  preferredMetal: 'gold' | 'silver' = 'silver'
+  preferredMetal: 'gold' | 'silver' = 'silver',
+  goldEntries?: GoldEntry[],
+  silverWeight?: number,
+  silverRate?: number
 ): ZakatResult => {
   // Calculate nisab threshold
   const nisabThreshold = calculateNisab(metalPrices, preferredMetal);
@@ -113,6 +141,53 @@ export const calculateZakat = (
     zakatAmount: isEligible ? amount * ZAKAT_RATE : 0
   }));
   
+  // Create detailed breakdown
+  const detailedBreakdown: DetailedBreakdownItem[] = [];
+  
+  // Process each asset type
+  Object.entries(assets).forEach(([category, amount]) => {
+    if (amount <= 0) return;
+    
+    const formattedCategory = formatCategoryName(category);
+    const zakatAmount = isEligible ? amount * ZAKAT_RATE : 0;
+    
+    // Handle special case for gold with detailed entries
+    if (category === 'gold' && goldEntries && goldEntries.length > 0) {
+      const goldEntriesWithZakat: GoldEntryWithZakat[] = goldEntries.map(entry => {
+        const value = calculateGoldValue(entry.weight, entry.rate, entry.purity);
+        return {
+          ...entry,
+          value,
+          zakatAmount: isEligible ? value * ZAKAT_RATE : 0
+        };
+      });
+      
+      detailedBreakdown.push({
+        category: formattedCategory,
+        amount,
+        zakatAmount,
+        entries: goldEntriesWithZakat
+      });
+    } 
+    // Handle special case for silver with weight/rate details
+    else if (category === 'silver' && silverWeight && silverRate) {
+      detailedBreakdown.push({
+        category: formattedCategory,
+        amount,
+        zakatAmount,
+        details: `${silverWeight}g at ${silverRate}/g`
+      });
+    }
+    // Handle all other asset types
+    else {
+      detailedBreakdown.push({
+        category: formattedCategory,
+        amount,
+        zakatAmount
+      });
+    }
+  });
+  
   return {
     nisabThreshold,
     totalAssets,
@@ -120,7 +195,8 @@ export const calculateZakat = (
     netZakatableAssets,
     zakatPayable,
     isEligible,
-    breakdown
+    breakdown,
+    detailedBreakdown
   };
 };
 

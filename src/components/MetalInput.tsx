@@ -4,21 +4,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { calculateGoldValue, Currency, formatCurrency, GoldPurity, GOLD_PURITY_FACTORS } from '@/utils/zakatCalculations';
+import { calculateGoldValue, Currency, formatCurrency, GoldPurity, GOLD_PURITY_FACTORS, GoldEntry } from '@/utils/zakatCalculations';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2 } from 'lucide-react';
-
-interface GoldEntry {
-  id: string;
-  weight: number;
-  purity: GoldPurity;
-  rate: number; // Added rate per gram for each entry
-}
 
 interface MetalInputProps {
   type: 'gold' | 'silver';
   value: number;
-  onChange: (value: number) => void;
+  onChange: (value: number, ...args: any[]) => void;
   currency: Currency;
 }
 
@@ -43,11 +36,11 @@ const MetalInput: React.FC<MetalInputProps> = ({
       const calculatedValue = goldEntries.reduce((total, entry) => {
         return total + calculateGoldValue(entry.weight, entry.rate, entry.purity);
       }, 0);
-      onChange(calculatedValue);
+      onChange(calculatedValue, goldEntries);
     } else {
       // Silver calculation
       const calculatedValue = weight * silverRate;
-      onChange(calculatedValue);
+      onChange(calculatedValue, weight, silverRate);
     }
   }, [weight, silverRate, goldEntries, type, onChange]);
 
