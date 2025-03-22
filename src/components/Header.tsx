@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { CrescentMoon, SunMedium, Menu } from 'lucide-react';
+import { Moon, Sun, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
@@ -57,9 +57,9 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
         <div className="flex items-center">
           <Button variant="ghost" size="icon" onClick={toggleTheme} className="ml-2">
             {isDark ? (
-              <SunMedium className="h-5 w-5" />
+              <Sun className="h-5 w-5" />
             ) : (
-              <CrescentMoon className="h-5 w-5" />
+              <Moon className="h-5 w-5" />
             )}
             <span className="sr-only">Toggle theme</span>
           </Button>
