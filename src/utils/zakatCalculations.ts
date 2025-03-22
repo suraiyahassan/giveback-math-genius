@@ -4,7 +4,7 @@ export const GOLD_NISAB_GRAMS = 87.48; // 87.48 grams of gold
 export const SILVER_NISAB_GRAMS = 612.36; // 612.36 grams of silver
 export const ZAKAT_RATE = 0.025; // 2.5%
 
-export type Currency = 'USD' | 'EUR' | 'GBP' | 'AUD' | 'CAD';
+export type Currency = 'USD' | 'EUR' | 'GBP' | 'AUD' | 'CAD' | 'INR';
 
 export interface MetalPrices {
   gold: number; // Price per gram
@@ -17,6 +17,19 @@ export const DEFAULT_METAL_PRICES: MetalPrices = {
   silver: 0.78, // USD per gram
 };
 
+// Gold purity conversion factors
+export const GOLD_PURITY_FACTORS = {
+  '24k': 1.0,    // 100% pure gold
+  '22k': 0.9167, // 91.67% pure gold
+  '21k': 0.875,  // 87.5% pure gold
+  '20k': 0.8333, // 83.33% pure gold
+  '18k': 0.75,   // 75% pure gold
+  '16k': 0.6667, // 66.67% pure gold
+  '14k': 0.5833, // 58.33% pure gold
+};
+
+export type GoldPurity = keyof typeof GOLD_PURITY_FACTORS;
+
 // Calculate Nisab threshold in currency based on gold and silver prices
 export const calculateNisab = (
   metalPrices: MetalPrices = DEFAULT_METAL_PRICES,
@@ -28,6 +41,15 @@ export const calculateNisab = (
   // Islamic scholars often recommend using the lower value (usually silver)
   // to ensure more people can give Zakat
   return preferredMetal === 'gold' ? goldNisab : silverNisab;
+};
+
+// Calculate the value of gold based on weight, rate, and purity
+export const calculateGoldValue = (
+  weightInGrams: number,
+  ratePerGram: number,
+  purity: GoldPurity = '24k'
+): number => {
+  return weightInGrams * ratePerGram * GOLD_PURITY_FACTORS[purity];
 };
 
 export interface AssetValues {
@@ -115,7 +137,16 @@ export const formatCurrency = (
   currency: Currency = 'USD',
   options: Intl.NumberFormatOptions = {}
 ): string => {
-  return new Intl.NumberFormat('en-US', {
+  const locales: Record<Currency, string> = {
+    USD: 'en-US',
+    EUR: 'de-DE',
+    GBP: 'en-GB',
+    AUD: 'en-AU',
+    CAD: 'en-CA',
+    INR: 'en-IN'
+  };
+  
+  return new Intl.NumberFormat(locales[currency], {
     style: 'currency',
     currency: currency,
     minimumFractionDigits: 2,

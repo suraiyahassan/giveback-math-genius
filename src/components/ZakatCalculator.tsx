@@ -10,6 +10,7 @@ import {
   Currency
 } from '@/utils/zakatCalculations';
 import AssetInput from './AssetInput';
+import MetalInput from './MetalInput';
 import CalculationResult from './CalculationResult';
 import EducationalContent from './EducationalContent';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -125,6 +126,7 @@ const ZakatCalculator: React.FC = () => {
                           <SelectItem value="GBP">GBP (£)</SelectItem>
                           <SelectItem value="AUD">AUD ($)</SelectItem>
                           <SelectItem value="CAD">CAD ($)</SelectItem>
+                          <SelectItem value="INR">INR (₹)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -139,22 +141,29 @@ const ZakatCalculator: React.FC = () => {
                       onChange={(value) => handleAssetChange('cash', value)}
                       currency={currency}
                     />
-                    <AssetInput
-                      id="gold"
-                      label="Gold"
-                      value={assets.gold}
-                      onChange={(value) => handleAssetChange('gold', value)}
-                      description="Value of gold jewelry, coins, etc."
-                      currency={currency}
-                    />
-                    <AssetInput
-                      id="silver"
-                      label="Silver"
-                      value={assets.silver}
-                      onChange={(value) => handleAssetChange('silver', value)}
-                      description="Value of silver jewelry, coins, etc."
-                      currency={currency}
-                    />
+                    
+                    {/* Gold Input with Metal Component */}
+                    <div className="space-y-2">
+                      <Label htmlFor="gold" className="text-sm font-medium">Gold</Label>
+                      <MetalInput
+                        type="gold"
+                        value={assets.gold}
+                        onChange={(value) => handleAssetChange('gold', value)}
+                        currency={currency}
+                      />
+                    </div>
+                    
+                    {/* Silver Input with Metal Component */}
+                    <div className="space-y-2">
+                      <Label htmlFor="silver" className="text-sm font-medium">Silver</Label>
+                      <MetalInput
+                        type="silver"
+                        value={assets.silver}
+                        onChange={(value) => handleAssetChange('silver', value)}
+                        currency={currency}
+                      />
+                    </div>
+                    
                     <AssetInput
                       id="stocks"
                       label="Stocks & Shares"
