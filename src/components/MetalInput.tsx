@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { calculateGoldValue, Currency, formatCurrency, GoldPurity, GOLD_PURITY_FACTORS } from '@/utils/zakatCalculations';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ interface GoldEntry {
   id: string;
   weight: number;
   purity: GoldPurity;
+  rate: number; // Added rate per gram for each entry
 }
 
 interface MetalInputProps {
@@ -27,29 +28,28 @@ const MetalInput: React.FC<MetalInputProps> = ({
   onChange,
   currency
 }) => {
-  const [rate, setRate] = useState<number>(type === 'gold' ? 62.5 : 0.78); // Default values
-  
   // For silver
   const [weight, setWeight] = useState<number>(0);
+  const [silverRate, setSilverRate] = useState<number>(0.78); // Default silver rate
   
   // For gold
   const [goldEntries, setGoldEntries] = useState<GoldEntry[]>([
-    { id: '1', weight: 0, purity: '24k' }
+    { id: '1', weight: 0, purity: '24k', rate: 62.5 }
   ]);
 
   useEffect(() => {
     if (type === 'gold') {
-      // Calculate total gold value from all entries
+      // Calculate total gold value from all entries, using entry-specific rates
       const calculatedValue = goldEntries.reduce((total, entry) => {
-        return total + calculateGoldValue(entry.weight, rate, entry.purity);
+        return total + calculateGoldValue(entry.weight, entry.rate, entry.purity);
       }, 0);
       onChange(calculatedValue);
     } else {
-      // Silver doesn't need purity calculation
-      const calculatedValue = weight * rate;
+      // Silver calculation
+      const calculatedValue = weight * silverRate;
       onChange(calculatedValue);
     }
-  }, [weight, goldEntries, rate, type, onChange]);
+  }, [weight, silverRate, goldEntries, type, onChange]);
 
   const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const cleanValue = e.target.value.replace(/[^0-9.]/g, '');
@@ -59,12 +59,12 @@ const MetalInput: React.FC<MetalInputProps> = ({
     setWeight(numericValue);
   };
 
-  const handleRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSilverRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const cleanValue = e.target.value.replace(/[^0-9.]/g, '');
     const parts = cleanValue.split('.');
     const sanitizedValue = parts[0] + (parts.length > 1 ? '.' + parts[1] : '');
     const numericValue = sanitizedValue === '' ? 0 : parseFloat(sanitizedValue);
-    setRate(numericValue);
+    setSilverRate(numericValue);
   };
 
   const handleGoldWeightChange = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,6 +80,19 @@ const MetalInput: React.FC<MetalInputProps> = ({
     );
   };
 
+  const handleGoldRateChange = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const cleanValue = e.target.value.replace(/[^0-9.]/g, '');
+    const parts = cleanValue.split('.');
+    const sanitizedValue = parts[0] + (parts.length > 1 ? '.' + parts[1] : '');
+    const numericValue = sanitizedValue === '' ? 0 : parseFloat(sanitizedValue);
+    
+    setGoldEntries(prevEntries => 
+      prevEntries.map(entry => 
+        entry.id === id ? { ...entry, rate: numericValue } : entry
+      )
+    );
+  };
+
   const handleGoldPurityChange = (id: string, newPurity: GoldPurity) => {
     setGoldEntries(prevEntries => 
       prevEntries.map(entry => 
@@ -90,7 +103,9 @@ const MetalInput: React.FC<MetalInputProps> = ({
 
   const addGoldEntry = () => {
     const newId = String(Date.now());
-    setGoldEntries(prev => [...prev, { id: newId, weight: 0, purity: '24k' }]);
+    // Copy the rate from the last entry if available
+    const lastRate = goldEntries.length > 0 ? goldEntries[goldEntries.length - 1].rate : 62.5;
+    setGoldEntries(prev => [...prev, { id: newId, weight: 0, purity: '24k', rate: lastRate }]);
   };
 
   const removeGoldEntry = (id: string) => {
@@ -101,7 +116,7 @@ const MetalInput: React.FC<MetalInputProps> = ({
 
   // Calculate individual values for each gold entry
   const getEntryValue = (entry: GoldEntry) => {
-    return calculateGoldValue(entry.weight, rate, entry.purity);
+    return calculateGoldValue(entry.weight, entry.rate, entry.purity);
   };
 
   return (
@@ -135,8 +150,8 @@ const MetalInput: React.FC<MetalInputProps> = ({
               <Input
                 id="silver-rate"
                 type="text"
-                value={rate === 0 ? '' : rate.toString()}
-                onChange={handleRateChange}
+                value={silverRate === 0 ? '' : silverRate.toString()}
+                onChange={handleSilverRateChange}
                 placeholder="0.00"
               />
             </div>
@@ -145,21 +160,6 @@ const MetalInput: React.FC<MetalInputProps> = ({
         
         {type === 'gold' && (
           <>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="gold-rate" className="text-xs">
-                  Rate per gram ({currency})
-                </Label>
-              </div>
-              <Input
-                id="gold-rate"
-                type="text"
-                value={rate === 0 ? '' : rate.toString()}
-                onChange={handleRateChange}
-                placeholder="0.00"
-              />
-            </div>
-            
             <div className="space-y-4">
               {goldEntries.map((entry, index) => (
                 <div key={entry.id} className="border rounded-md p-3 space-y-3 bg-card/50">
@@ -178,7 +178,7 @@ const MetalInput: React.FC<MetalInputProps> = ({
                       </Button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-2">
                       <Label htmlFor={`gold-weight-${entry.id}`} className="text-xs">
                         Weight (grams)
@@ -210,6 +210,18 @@ const MetalInput: React.FC<MetalInputProps> = ({
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`gold-rate-${entry.id}`} className="text-xs">
+                        Rate per gram ({currency})
+                      </Label>
+                      <Input
+                        id={`gold-rate-${entry.id}`}
+                        type="text"
+                        value={entry.rate === 0 ? '' : entry.rate.toString()}
+                        onChange={(e) => handleGoldRateChange(entry.id, e)}
+                        placeholder="0.00"
+                      />
                     </div>
                   </div>
                 </div>
